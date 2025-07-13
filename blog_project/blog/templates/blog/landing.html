@@ -1,0 +1,144 @@
+{% extends 'blog/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-12 col-md-3 col-lg-2 d-md-block bg-dark sidebar shadow-sm px-0">
+            <div class="position-sticky pt-3">
+                <h6 class="sidebar-heading text-center text-light mb-3">
+                    <i class="bi bi-list-ul me-2"></i>Categories
+                </h6>
+                <ul class="nav flex-column small px-2">
+                    {% for category in categories %}
+                        <li class="nav-item d-flex justify-content-between align-items-center mb-2">
+                            <a href="{% url 'category_posts' category.id %}" class="nav-link text-white w-100 {% if category.id == selected_category_id %}fw-bold bg-primary bg-opacity-25 rounded{% endif %}">
+                                <i class="bi bi-folder2-open me-1"></i>{{ category.name }}
+                            </a>
+                            {% if user.is_authenticated %}
+                                {% if user in category.subscribers.all %}
+                                    <form action="{% url 'unsubscribe_category' category.id %}" method="post" class="ms-2">
+                                        {% csrf_token %}
+                                        <button class="btn btn-sm py-0 px-1 btn-outline-danger" title="Unsubscribe">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <form action="{% url 'subscribe_category' category.id %}" method="post" class="ms-2">
+                                        {% csrf_token %}
+                                        <button class="btn btn-sm py-0 px-1 btn-outline-success" title="Subscribe">
+                                            <i class="bi bi-plus-circle"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+                        </li>
+                    {% empty %}
+                        <li class="nav-item text-white-50 text-center py-2">No categories yet.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="col-12 col-md-9 col-lg-10 ms-sm-auto px-md-5 pt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fs-4 text-light"><i class="bi bi-stars"></i> Top Posts</h2>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'add_post' %}" class="btn btn-success btn-sm rounded-pill">
+                        <i class="bi bi-plus-circle"></i> Create Post
+                    </a>
+                {% endif %}
+            </div>
+
+            <!-- Posts Grid -->
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-4">
+                {% for post in page_obj %}
+                    <div class="col">
+                        <div class="card h-100 shadow-sm border-0 hover-shadow transition">
+                            <a href="{% url 'post_detail' post.id %}">
+                                {% if post.image %}
+                                    <img src="{{ post.image.url }}" class="card-img-top" alt="{{ post.title }}" style="height:150px; object-fit:cover;">
+                                {% else %}
+                                    <div class="bg-light d-flex justify-content-center align-items-center" style="height:150px;">
+                                        <i class="bi bi-image text-muted fs-3"></i>
+                                    </div>
+                                {% endif %}
+                            </a>
+                            <div class="card-body px-3 py-2">
+                                <h6 class="card-title fw-semibold mb-1">{{ post.title|truncatechars:40 }}</h6>
+                                <p class="text-muted small mb-2">{{ post.content|truncatewords:12 }}</p>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span class="badge bg-secondary">{{ post.category.name }}</span>
+                                    {% for tag in post.tags.all %}
+                                        <span class="badge bg-info text-dark">{{ tag.name }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="card-footer bg-white d-flex justify-content-between align-items-center px-3 py-2 border-top">
+                                <small class="text-muted"><i class="bi bi-calendar-event me-1"></i>{{ post.published|date:"M d, Y" }}</small>
+                                <a href="{% url 'post_detail' post.id %}" class="btn btn-outline-primary btn-sm px-3 py-0">Read</a>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col">
+                        <div class="alert alert-info text-center w-100">No posts available.</div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="row mt-5">
+                <div class="col d-flex justify-content-center">
+                    <nav>
+                        <ul class="pagination">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                                {% elif num > page_obj.number|add:'-2' and num < page_obj.number|add:'2' %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Next</span></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+
+<style>
+.card.hover-shadow:hover {
+    box-shadow: 0 0.75rem 1.5rem rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+    transition: 0.3s ease;
+}
+.sidebar {
+    background: #1e1e1e;
+}
+.sidebar .nav-link:hover,
+.sidebar .nav-link.fw-bold {
+    background-color: #0d6efd !important;
+    color: #fff !important;
+}
+.sidebar-heading {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+</style>
+{% endblock %}
